@@ -24,30 +24,18 @@ except PermissionError:
     print("──────────────────────────────────────────")
 print()
 
-class User:
-    # CONSTRUCTOR
-    def __init__(self, host):
-        self.host = host
-
-    # INSTANCE on which system is running script
-    def get_system(self):
-        return platform.system().lower()    # what system user is using
-    
-    # INSTANCE for right cmd, according to what system is user using
-    def set_cmd(self):
-        if self.get_system() == "linux":
-            return ["ping", "-c", "1", self.host]   # -c for linux/macOS
-        else:
-            return ["ping", "-n", "1", self.host]   # -n for windows
-
 # function for pinging availability of hosts
 def pinging_hosts_latency(host):
-    cmd = User(host)                           # calling class with hosts
+    os = platform.system().lower()
+
+    if os == "linux":
+        cmd = ["ping", "-c", "1", host]         # -c for linux/macOS
+    else:
+        cmd = ["ping", "-n", "1", host]         # -n for windows
+
     try:
         data_out = subprocess.run(
-            cmd.set_cmd(),                     # commands for pinging system and calling function from class
-            #stdout=subprocess.DEVNULL,        # ignores the output (we don't need it, we're just checking for success)
-            #stderr=subprocess.DEVNULL,        # ignores errors so they are not written to the console
+            cmd,                               # commands for pinging system
             capture_output=True,               # capture data from pinging
             text=True,                         # convert output data from bytes to string to process it with split() function
             check=True                         # ensures that a failed ping throws an exception
