@@ -4,7 +4,7 @@
 import subprocess
 import platform
 
-file_path = "/home/dusan/Desktop/Github/Python_projects/Network_Automation_&_Testing_Tool/Main_program/hosts.txt"
+file_path = "/home/dusan/Desktop/Github/Python_projects/Network_automation/Main_program/hosts.txt"
 
 # Reading file of hosts with error notification
 print()
@@ -41,40 +41,30 @@ class User:
             return ["ping", "-n", "1", self.host]   # -n for windows
 
 # function for pinging availability of hosts
-def pinging_hosts(host):
+def pinging_hosts_latency(host):
     cmd = User(host)                           # calling class with hosts
     try:
-        subprocess.run(
-            cmd.set_cmd(),                     # commands for pinging system and calling function from class
-            stdout=subprocess.DEVNULL,         # ignores the output (we don't need it, we're just checking for success)
-            stderr=subprocess.DEVNULL,         # ignores errors so they are not written to the console
-            check=True                         # ensures that a failed ping throws an exception
-        )
-        return True                            # host is available
-    except subprocess.CalledProcessError:
-        return False                           # host is unavailable
-    
-def ping_latency(host):
-    cmd = User(host)                            # calling class with hosts
-    try:
         data_out = subprocess.run(
-            cmd.set_cmd(),                      # commands for pinging system and calling function from class
-            capture_output=True,                # capture data from pinging
-            text=True,                          # convert output data from bytes to string to process it with split() function
-            check=True                          # ensures that a failed ping throws an exception
-        ).stdout                                # contain text from capture_output
+            cmd.set_cmd(),                     # commands for pinging system and calling function from class
+            #stdout=subprocess.DEVNULL,        # ignores the output (we don't need it, we're just checking for success)
+            #stderr=subprocess.DEVNULL,        # ignores errors so they are not written to the console
+            capture_output=True,               # capture data from pinging
+            text=True,                         # convert output data from bytes to string to process it with split() function
+            check=True                         # ensures that a failed ping throws an exception
+        ).stdout
 
         for data in data_out.split():           # using split() to find time of pinging (whole word)
             if "time=" in data:
                 return float(data.replace("time=", ""))
-            
+
+        return True                            # host is available
     except subprocess.CalledProcessError:
-        return False
+        return False                           # host is unavailable
 
 # Printing result of pinging
 for host in hosts:
-    latency = ping_latency(host)
-    if pinging_hosts(host):
+    latency = pinging_hosts_latency(host)
+    if pinging_hosts_latency(host):
         print(f"✅ Host '{host}' is available, latency {latency:.2f} ms")
     else:
         print(f"❌ Host '{host}' is unavailable")
