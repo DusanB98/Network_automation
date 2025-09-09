@@ -4,17 +4,19 @@
 import subprocess
 import platform
 import sqlite3
+import logging
 import datetime
 
-#File location
-data_log_file = "/home/dusan/Desktop/Github/Python_projects/Linux_log_analyzer/Main_program/connection_hosts_log.db"
-file_path = "/home/dusan/Desktop/Github/Python_projects/Linux_log_analyzer/Main_program/hosts.txt"
+# File location
+database_file = "/home/dusan/Desktop/Github/Python_projects/Network_automation/Main_program/response_hosts_database.db"
+log_file = "/home/dusan/Desktop/Github/Python_projects/Network_automation/Main_program/response_hosts_log.log"
+hosts_file = "/home/dusan/Desktop/Github/Python_projects/Network_automation/Main_program/hosts.txt"
 
 # Function for creating database
-def database_db_init(data_log_file):
+def database_init(database_file):
 
     # creating connection with database (if doesn't exist, it will create new)
-    database = sqlite3.connect(data_log_file)
+    database = sqlite3.connect(database_file)
     
     # creating SQL cursor, cmds are executed through this cursor
     cursor = database.cursor()
@@ -33,15 +35,23 @@ def database_db_init(data_log_file):
     database.commit()
     database.close()
 
+def log_init(log_file):
+    logging.basicConfig(                                        # configuration of function log
+        filename=log_file,                                      # name of file "path"
+        level=logging.INFO,                                     # minimal level info of log
+        format="%(asctime)s [%(levelname)s] %(message)s",       # time, info about (INFO, WARNING, ERROR), insert message which is defined by me
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
 # Function for reading file of hosts with error notification
-def read_hosts(file_path):
+def read_hosts(hosts_file):
     print()
     try:
-        with open(file=file_path, mode="r") as file:
+        with open(file=hosts_file, mode="r") as file:
             hosts = file.read()
             print("List of hosts:")
             print(hosts, "\n")
-            hosts = hosts.splitlines()         # split a string into a list of lines at each newline character (\n)
+            hosts = hosts.splitlines()        # split a string into a list of lines at each newline character (\n)
             return hosts
     except FileNotFoundError:
         print("──────────────────────")
@@ -76,26 +86,24 @@ def pinging_hosts_latency(host):
         for data in data_out.split():          # using split() to find time of pinging (whole word)
             if "time=" in data:
                 return float(data.replace("time=", ""))
-
-        return True                            # host is available
     
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError:  
         return False                           # host is unavailable
 
 # Function for saving data to databse
-def save_data(data_log_file, host, status, latency):
+def save_data(database_file, host, status, latency):
 
     # creating connection with database (if doesn't exist, it will create new)
-    database = sqlite3.connect(data_log_file)
+    database = sqlite3.connect(database_file)
     
     # creating SQL cursor, cmds are executed through this cursor
     cursor = database.cursor()
 
-    # Datetime customization for the right time format
+    # datetime customization for the right time format
     date_now = datetime.datetime.now()
-    date_now = date_now.strftime("%H:%M:%S %m-%d-%Y")
+    date_now = date_now.strftime("%Y-%m-%d %H:%M:%S")
     
-    # Rounding latency time to 2 decimal places and adding ms
+    # rounding latency time to 2 decimal places and adding ms
     latency = f"{latency:.2f} ms"
 
     # writing collected data to variable (data) which contains (Host, Status, Latency, Timestamp), "?" is position where are data written down
@@ -110,29 +118,34 @@ def save_data(data_log_file, host, status, latency):
 def main():
     
     # creating and initializing database
-    database_db_init(data_log_file)
+    database_init(database_file)
+
+    # configuration for log file
+    log_init(log_file)
     
     # opening and reading file of hosts to ping
-    hosts = read_hosts(file_path)
+    hosts = read_hosts(hosts_file)
 
     for host in hosts:
         # pinging hosts according to what system is user using
         latency = pinging_hosts_latency(host)
 
-        # database status check
-        if latency:
+        # console and database status check
+        if latency >= 0.01 and latency <= 99.99:
             status = "✅"
-        else: 
+            logging.info(f"{host} is available, latency {latency:.2f} ms")
+            print(f"✅ Host '{host}' is available, latency {latency:.2f} ms")
+        elif latency >= 100:
+            status = "⚠️  "
+            logging.warning(f"{host} is available, slower response, latency {latency:.2f} ms")
+            print(f"⚠️  Host '{host}' is available, slower response, latency {latency:.2f} ms")
+        elif latency == 0.00:
             status = "❌"
+            logging.error(f"{host} no response, latency {latency:.2f}")
+            print(f"❌ Host '{host}' is unavailable, latency {latency:.2f}")
 
         # saving data to database
-        save_data(data_log_file, host, status, latency)
-
-        # console status check
-        if pinging_hosts_latency(host):
-            print(f"✅ Host '{host}' is available, latency {latency:.2f} ms")
-        else:
-            print(f"❌ Host '{host}' is unavailable")
+        save_data(database_file, host, status, latency)
 
 # Calling functions and printing results
 if __name__ == '__main__':
