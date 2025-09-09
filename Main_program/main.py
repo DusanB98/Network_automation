@@ -1,4 +1,4 @@
-# Python pinging server with latency
+# Python server pinger with latency logger
 # Author: DusanB98
 
 import subprocess
@@ -40,7 +40,7 @@ def log_init(log_file):
         filename=log_file,                                      # name of file "path"
         level=logging.INFO,                                     # minimal level info of log
         format="%(asctime)s [%(levelname)s] %(message)s",       # time, info about (INFO, WARNING, ERROR), insert message which is defined by me
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S"                             # modification of timestamp for right ISO format
     )
 
 # Function for reading file of hosts with error notification
@@ -130,7 +130,7 @@ def main():
         # pinging hosts according to what system is user using
         latency = pinging_hosts_latency(host)
 
-        # console and database status check
+        # console, database and log status check
         if latency >= 0.01 and latency <= 99.99:
             status = "✅"
             logging.info(f"{host} is available, latency {latency:.2f} ms")
